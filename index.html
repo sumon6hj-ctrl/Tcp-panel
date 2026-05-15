@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Hᴀsɪʙ codex Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Rajdhani:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --neon: #00f2ff; --pink: #ff0055; }
+        @keyframes rgb { 0%, 100% { border-color: var(--pink); box-shadow: 0 0 20px var(--pink); } 50% { border-color: var(--neon); box-shadow: 0 0 20px var(--neon); } }
+        body { background: #010103; color: white; font-family: 'Rajdhani', sans-serif; overflow: hidden; height: 100vh; margin: 0; }
+        
+        /* Intro Gate Styles */
+        #gate-screen {
+            position: fixed;
+            inset: 0;
+            background: #010103;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: 1s cubic-bezier(0.85, 0, 0.15, 1);
+        }
+        .v-line {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: var(--neon);
+            box-shadow: 0 0 20px var(--neon);
+            z-index: 1;
+        }
+        .gate-ui { position: relative; z-index: 10; text-align: center; }
+        .fingerprint-btn {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 2px solid var(--neon);
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 40px auto;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.3);
+            transition: 0.3s;
+        }
+        .fingerprint-btn i { font-size: 50px; color: var(--neon); text-shadow: 0 0 15px var(--neon); }
+        .social-bar { position: absolute; bottom: 50px; display: flex; gap: 25px; z-index: 10; }
+        .social-icon { font-size: 22px; color: white; transition: 0.3s; opacity: 0.8; }
+        .social-icon:hover { color: var(--neon); opacity: 1; transform: scale(1.2); }
+        .gate-open { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+
+        /* Original Panel Styles */
+        .neon-box { background: rgba(8, 2, 18, 0.98); border: 2px solid var(--pink); border-radius: 35px; animation: rgb 6s infinite ease-in-out; }
+        .input-group input { width: 100%; background: rgba(0,0,0,0.8); border: 1px solid #222; border-radius: 12px; padding: 14px 14px 14px 45px; outline: none; transition: 0.3s; color: white; }
+        .input-group input:disabled { background: rgba(255, 255, 255, 0.05); color: #666; border-color: #111; }
+        .input-group i { position: absolute; left: 15px; top: 15px; color: var(--neon); text-shadow: 0 0 5px var(--neon); }
+        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px); padding: 12px 30px; border-radius: 50px; font-family: 'Orbitron'; font-size: 10px; z-index: 9999; background: #000; border: 2px solid; transition: 0.4s; font-weight: 900; }
+        #toast.active { opacity: 1; transform: translateX(-50%) translateY(0); }
+        #timer-display { font-family: 'Orbitron'; color: var(--neon); text-shadow: 0 0 10px var(--neon); }
+        #logs::-webkit-scrollbar { width: 3px; }
+        #logs::-webkit-scrollbar-thumb { background: var(--neon); }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <div id="gate-screen">
+        <div class="v-line"></div>
+        <div class="gate-ui">
+            <h1 style="font-family: 'Orbitron';" class="text-4xl font-black tracking-tighter text-white">Hᴀsɪʙ codex</h1>
+            <p class="text-[10px] tracking-[0.5em] text-cyan-400 font-bold mt-2 uppercase">TOOLS CORE V2.5</p>
+            
+            <div class="fingerprint-btn" onclick="unlock()">
+                <i class="fa-solid fa-fingerprint"></i>
+            </div>
+        </div>
+
+        <div class="social-bar">
+            <a href="https://t.me/hasib_hi" target="_blank" class="social-icon"><i class="fa-brands fa-telegram"></i></a>
+            <a href="https://www.youtube.com/@hasib_hi" target="_blank" class="social-icon"><i class="fa-brands fa-youtube"></i></a>
+            <a href="https://www.youtube.com/@hasib_hi?igsh=OXU3NDhyNjM4ZXk0" target="_blank" class="social-icon"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.tiktok.com/@hasib_hi?_r=1&_t=ZS-93KU5huJbua" target="_blank" class="social-icon"><i class="fa-brands fa-tiktok"></i></a>
+        </div>
+    </div>
+
+    <div id="toast">SYSTEM READY</div>
+
+    <div class="neon-box w-full max-w-md p-8">
+        <div class="text-center mb-4">
+            <h1 style="font-family: 'Orbitron';" class="text-3xl font-black italic tracking-tighter text-white">Hᴀsɪʙ codex</h1>
+            <p class="text-[8px] tracking-[0.5em] text-pink-500 font-bold mt-1 uppercase">"শূন্যের শূণ্যতায়, শূণ্যস্থান শূণ্য 🤍</p>
+            
+            <div id="timer-cont" class="mt-4 hidden">
+                <p class="text-[9px] text-gray-400 uppercase tracking-widest">Access Time Remaining</p>
+                <h2 id="timer-display" class="text-2xl font-black tracking-widest mt-1">00:00:00</h2>
+            </div>
+
+            <div class="mt-4 inline-flex items-center bg-black/50 py-1.5 px-4 rounded-full border border-white/5">
+                <span id="dot" class="w-2.5 h-2.5 rounded-full mr-2 bg-red-600"></span>
+                <span id="stext" class="text-[9px] font-black tracking-widest text-gray-500 uppercase">OFFLINE</span>
+            </div>
+        </div>
+
+        <div class="space-y-3 mb-6">
+            <div class="input-group relative"><i>👤</i><input id="name" type="text" placeholder="User Name"></div>
+            <div class="input-group relative"><i>🎯</i><input id="uid" type="text" placeholder="Guest UID"></div>
+            <div class="input-group relative"><i>🔑</i><input id="pw" type="password" placeholder="Password"></div>
+        </div>
+
+        <button id="start-btn" onclick="control('start')" class="w-full py-4 text-xs font-black tracking-[0.2em] mb-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-xl text-white shadow-lg">START BOT 🚀</button>
+
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <button id="stop-btn" onclick="control('stop')" class="bg-red-900/10 border border-red-600 text-red-500 py-2.5 rounded-xl text-[9px] font-bold uppercase">Stop</button>
+            <button onclick="control('restart')" class="bg-yellow-900/10 border border-yellow-600 text-yellow-500 py-2.5 rounded-xl text-[9px] font-bold uppercase">Reboot</button>
+        </div>
+
+        <div class="bg-black/90 rounded-2xl h-40 border border-white/5 flex flex-col overflow-hidden">
+            <div class="bg-white/5 px-3 py-1.5 text-[8px] text-gray-500 flex justify-between font-bold border-b border-white/5">
+                <span>TERMINAL LOGS</span>
+                <span id="l-user" class="text-cyan-400"></span>
+            </div>
+            <div id="logs" class="p-3 overflow-y-auto text-[10px] text-cyan-400 font-mono leading-relaxed h-full"></div>
+        </div>
+    </div>
+
+    <button onclick="openAdmin()" class="fixed bottom-6 right-6 w-14 h-14 bg-black border-2 border-cyan-400 rounded-full flex items-center justify-center shadow-2xl z-50">🛡️</button>
+
+    <div id="admin-panel" class="hidden fixed inset-0 bg-black/98 z-[100] flex items-center justify-center p-4">
+        <div class="neon-box w-full max-w-sm p-8 border-cyan-400">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xs font-bold text-cyan-400 uppercase">Admin Console</h2>
+                <button onclick="closeAdmin()" class="text-white">✕</button>
+            </div>
+            <input id="adm-pass" type="password" placeholder="Passkey" class="w-full bg-black border border-pink-500 p-3 rounded-xl text-center text-sm mb-4 outline-none">
+            <button onclick="loadStats()" class="w-full bg-cyan-600/10 border border-cyan-500 py-3 rounded-xl text-xs font-bold mb-6 text-cyan-400 uppercase">Verify</button>
+            <div id="admin-content" class="hidden space-y-6">
+                <div class="p-4 bg-white/5 rounded-2xl border border-white/10">
+                    <p class="text-[9px] text-gray-400 mb-2 uppercase">Global Duration (Min)</p>
+                    <div class="flex gap-2">
+                        <input id="glob-dur" type="number" class="w-2/3 bg-black border border-white/20 rounded-lg p-2 text-xs">
+                        <button onclick="setGlobal()" class="w-1/3 bg-pink-600 rounded-lg text-[9px] font-bold uppercase">Set</button>
+                    </div>
+                </div>
+                <div id="user-list" class="space-y-2 h-40 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Intro function
+        function unlock() {
+            document.getElementById('gate-screen').classList.add('gate-open');
+        }
+
+        const socket = io();
+        const inputs = ['name', 'uid', 'pw'];
+        let countdown;
+        let currentSeconds = 0;
+
+        window.onload = () => {
+            inputs.forEach(id => { 
+                if(localStorage.getItem(id)) document.getElementById(id).value = localStorage.getItem(id); 
+            });
+            checkBotStatus();
+        };
+
+        function msg(t) { 
+            const e=document.getElementById('toast'); 
+            e.innerText=t; e.classList.add('active'); 
+            setTimeout(()=>e.classList.remove('active'),3000); 
+        }
+
+        function startTimer(sec) {
+            clearInterval(countdown);
+            if(sec <= 0 && sec !== -1) { 
+                document.getElementById('timer-cont').classList.add('hidden'); 
+                return; 
+            }
+            if(sec === -1) {
+                document.getElementById('timer-cont').classList.remove('hidden');
+                document.getElementById('timer-display').innerText = "UNLIMITED";
+                return;
+            }
+            document.getElementById('timer-cont').classList.remove('hidden');
+            currentSeconds = sec;
+            function update() {
+                if(currentSeconds <= 0) { clearInterval(countdown); updateStat(false); return; }
+                let h = Math.floor(currentSeconds/3600), m = Math.floor((currentSeconds%3600)/60), s = Math.floor(currentSeconds%60);
+                document.getElementById('timer-display').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                currentSeconds--;
+            }
+            update(); countdown = setInterval(update, 1000);
+        }
+
+        function updateStat(run, rem = 0) {
+            document.getElementById('dot').className = run ? "w-2.5 h-2.5 rounded-full mr-2 bg-green-500 shadow-[0_0_10px_#00ff00]" : "w-2.5 h-2.5 rounded-full mr-2 bg-red-600";
+            document.getElementById('stext').innerText = run ? "SYSTEM ACTIVE" : "OFFLINE";
+            inputs.forEach(id => document.getElementById(id).disabled = run);
+            document.getElementById('start-btn').disabled = run;
+            document.getElementById('start-btn').style.opacity = run ? "0.4" : "1";
+            if(run) startTimer(Math.floor(rem)); 
+            else { clearInterval(countdown); document.getElementById('timer-cont').classList.add('hidden'); }
+        }
+
+        async function checkBotStatus() {
+            const name = document.getElementById('name').value.trim();
+            if(!name) return;
+            try {
+                const res = await fetch('/api/control', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({action: 'check_status', name})});
+                const d = await res.json(); 
+                updateStat(d.running, d.rem_sec);
+            } catch(e) {}
+        }
+
+        async function control(act) {
+            const name = document.getElementById('name').value.trim();
+            const uid = document.getElementById('uid').value, pw = document.getElementById('pw').value;
+            if(!name || !uid || !pw) return msg("FILL ALL FIELDS!");
+            const res = await fetch('/api/control', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({action: act, name, uid, password: pw})});
+            const d = await res.json(); msg(d.message);
+            if(d.status === 'success') {
+                if(act === 'start' || act === 'restart') inputs.forEach(id => localStorage.setItem(id, document.getElementById(id).value));
+                updateStat(d.running, d.rem_sec);
+            }
+        }
+
+        socket.on('time_sync', (m) => {
+            if (m.user === document.getElementById('name').value.trim()) { msg("TIME UPDATED BY ADMIN"); startTimer(m.rem_sec); }
+        });
+        socket.on('status_update', (m) => {
+            if (m.user === document.getElementById('name').value.trim()) updateStat(m.running);
+        });
+        socket.on('new_log', (m) => {
+            if (m.user === document.getElementById('name').value.trim()) {
+                const l = document.getElementById('logs');
+                const div = document.createElement('div');
+                div.className = "mb-1 border-l-2 border-cyan-500 pl-2";
+                div.innerText = `> ${m.data}`;
+                l.appendChild(div); l.scrollTop = l.scrollHeight;
+                if(m.data.includes("EXPIRED")) updateStat(false);
+            }
+        });
+
+        function openAdmin() { document.getElementById('admin-panel').classList.remove('hidden'); }
+        function closeAdmin() { document.getElementById('admin-panel').classList.add('hidden'); }
+        async function loadStats() {
+            const pass = document.getElementById('adm-pass').value;
+            const res = await fetch('/api/admin', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: pass, action: "get_stats"})});
+            const d = await res.json();
+            if(d.status === 'success') {
+                document.getElementById('admin-content').classList.remove('hidden');
+                document.getElementById('glob-dur').value = d.global_dur;
+                document.getElementById('user-list').innerHTML = d.users.map(u => `<div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10 text-[10px] mb-2"><div><p class="text-cyan-400 font-bold">${u.name}</p><p class="text-gray-500">${u.rem}m left</p></div><div class="flex gap-2"><button onclick="editT('${u.name}')" class="bg-cyan-600/20 border border-cyan-600 px-2 py-1 rounded text-cyan-500">Edit</button><button onclick="adminStop('${u.name}')" class="bg-red-600/20 border border-red-600 px-2 py-1 rounded text-red-500">Stop</button></div></div>`).join('');
+            } else msg(d.message);
+        }
+        async function setGlobal() {
+            const dur = document.getElementById('glob-dur').value;
+            const res = await fetch('/api/admin', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: document.getElementById('adm-pass').value, action: "set_global", duration: dur})});
+            const d = await res.json(); msg(d.message);
+        }
+        async function adminStop(u) {
+            await fetch('/api/admin', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: document.getElementById('adm-pass').value, action: "admin_stop", user: u})});
+            loadStats();
+        }
+        async function editT(u) {
+            const m = prompt("New time in minutes:"); if(!m) return;
+            const res = await fetch('/api/admin', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: document.getElementById('adm-pass').value, action: "update_time", user: u, mins: m})});
+            const d = await res.json(); msg(d.message); loadStats();
+        }
+    </script>
+</body>
+</html>
